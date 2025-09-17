@@ -212,16 +212,16 @@ def inner_loop_feature_selection(model_name, model, X_inner_train, y_inner_train
             
             # Create and train new model with selected features
             if model_name == "XGBoost":
-                # 创建参数字典，避免random_state重复传递
+               
                 model_params = model.get_params()
-                model_params['random_state'] = RANDOM_SEED  # 确保使用指定的随机种子
+                model_params['random_state'] = RANDOM_SEED 
                 temp_model = xgb.XGBClassifier(**model_params)
                 temp_model.fit(X_selected_train, y_inner_train, verbose=False)
             elif model_name == "Naive Bayes":
                 temp_model = GaussianNB(**model.get_params())
                 temp_model.fit(X_selected_train, y_inner_train)
             elif model_name == "SVM":
-                # 确保SVM模型设置probability=True以支持predict_proba
+                
                 model_params = model.get_params()
                 model_params['random_state'] = RANDOM_SEED
                 model_params['probability'] = True  # 明确设置probability=True
@@ -558,18 +558,18 @@ def retrain_best_models(best_models, X_train, y_train, X_train_non_scaled=None):
         try:
             # Create a new instance with best parameters and fixed random seed
             if model_name == "XGBoost":
-                # 创建参数字典，避免random_state重复传递
+               
                 model_params = model.get_params()
-                model_params['random_state'] = RANDOM_SEED  # 确保使用指定的随机种子
+                model_params['random_state'] = RANDOM_SEED 
                 new_model = xgb.XGBClassifier(**model_params)
             elif model_name == "Naive Bayes":
                 # Naive Bayes does not accept random_state parameter
                 new_model = GaussianNB(**model.get_params())
             else:
-                # 为所有其他模型采用一致的参数设置方法，避免random_state重复传递
+            
                 model_params = model.get_params()
                 if 'random_state' in model_params:
-                    model_params['random_state'] = RANDOM_SEED  # 更新或添加random_state参数
+                    model_params['random_state'] = RANDOM_SEED  
                 new_model_class = model.__class__
                 new_model = new_model_class(**model_params)
             
@@ -617,17 +617,17 @@ def evaluate_models_on_all_datasets(models, processed_datasets, export_dir=None)
             y_data = dataset['y']
             
             try:
-                # 对于SVM模型，添加特殊处理逻辑
+               
                 if model_name == "SVM":
                     try:
                         y_pred_proba = model.predict_proba(X_data)[:, 1]
                     except AttributeError:
                         try:
-                            # 如果predict_proba失败，使用decision_function并归一化到[0,1]范围
+                           
                             decision_scores = model.decision_function(X_data)
                             if len(decision_scores.shape) > 1:
                                 decision_scores = decision_scores[:, 0]
-                            # 归一化处理
+                           
                             y_pred_proba = (decision_scores - decision_scores.min()) / (decision_scores.max() - decision_scores.min() + 1e-10)
                         except Exception as e:
                             print(f"  Error getting prediction scores for {model_name}: {str(e)}")
@@ -722,26 +722,26 @@ def calculate_aic(y_true, y_pred_proba, n_features):
 # -------------------------- 7. Plot Confusion Matrix --------------------------
 def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=None, best_model_name=None, X_train=None, y_train=None, best_model_name_by_cv=None, inner_loop_best_feature_counts=None):
     """Plot confusion matrix for the specified best model or best model based on test set AUC and AIC"""
-    # 初始化变量，避免UnboundLocalError
+  
     best_model = None
     best_auc = 0.0
     y_pred = None
     fallback_model_used = False
     
     try:
-        # 首先检查models是否为空
+      
         if not models:
             print("Error: No models available to plot confusion matrix.")
             return None
         
-        # 默认使用第一个模型作为后备
+       
         default_model_name = next(iter(models.keys()))
         default_model = models[default_model_name]
         
-        # 如果提供了最佳模型名称，直接使用
+       
         if best_model_name and best_model_name in models:
             best_model = models[best_model_name]
-            # 计算该模型的测试集AUC
+           
             if best_model_name == "Naive Bayes" and X_test_non_scaled is not None:
                 try:
                     y_pred_proba = best_model.predict_proba(X_test_non_scaled)[:, 1]
@@ -763,24 +763,24 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
             best_auc = roc_auc_score(y_test, y_pred_proba)
             print(f"\nUsing specified best model: {best_model_name} with Test Set AUC: {best_auc:.4f}")
         else:
-            # 使用与identify_best_model相同的逻辑选择最佳模型（基于AIC和过拟合检查）
+            
             print(f"\n=== Selecting Best Model for Confusion Matrix (using AIC-based selection) ===")
             model_performances = {}
         
-        # 默认使用所有特征，除非提供了内部循环最佳特征数量
+       
         if inner_loop_best_feature_counts is None:
             inner_loop_best_feature_counts = {}
-            # 计算默认特征数量
+           
             default_n_features = X_train.shape[1] if X_train is not None else X_test.shape[1]
             for model_name in models.keys():
-                inner_loop_best_feature_counts[model_name] = default_n_features  # 默认使用所有特征
+                inner_loop_best_feature_counts[model_name] = default_n_features  
             
             for model_name, model in models.items():
-                # 根据模型类型使用适当的数据进行预测
+               
                 if model_name == "Naive Bayes" and X_test_non_scaled is not None:
                     try:
                         y_pred_proba_test = model.predict_proba(X_test_non_scaled)[:, 1]
-                        # 计算训练集性能
+                       
                         y_pred_proba_train = model.predict_proba(X_train)[:, 1] if X_train is not None else None
                     except AttributeError:
                         try:
@@ -790,7 +790,7 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                             # Normalize to [0, 1] range
                             y_pred_proba_test = (decision_scores_test - decision_scores_test.min()) / (decision_scores_test.max() - decision_scores_test.min() + 1e-10)
                             
-                            # 计算训练集性能
+                         
                             if X_train is not None:
                                 decision_scores_train = model.decision_function(X_train)
                                 if len(decision_scores_train.shape) > 1:
@@ -804,7 +804,7 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                 else:
                     try:
                         y_pred_proba_test = model.predict_proba(X_test)[:, 1]
-                        # 计算训练集性能
+                       
                         y_pred_proba_train = model.predict_proba(X_train)[:, 1] if X_train is not None else None
                     except AttributeError:
                         try:
@@ -814,7 +814,7 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                             # Normalize to [0, 1] range
                             y_pred_proba_test = (decision_scores_test - decision_scores_test.min()) / (decision_scores_test.max() - decision_scores_test.min() + 1e-10)
                             
-                            # 计算训练集性能
+                           
                             if X_train is not None:
                                 decision_scores_train = model.decision_function(X_train)
                                 if len(decision_scores_train.shape) > 1:
@@ -829,21 +829,21 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                 try:
                     auc_test = roc_auc_score(y_test, y_pred_proba_test)
                     auc_train = roc_auc_score(y_train, y_pred_proba_train) if y_pred_proba_train is not None and y_train is not None else None
-                    # 计算训练集和测试集的AUC差距，用于评估过拟合
+                    
                     auc_gap = auc_train - auc_test if auc_train is not None else 0
                 except Exception as e:
                     print(f"  Error calculating AUC for {model_name}: {str(e)}")
                     continue
                 
                 try:
-                    # 获取特征数量（使用内部循环最佳特征数量）
+                   
                     if model_name in inner_loop_best_feature_counts:
                         n_features = inner_loop_best_feature_counts[model_name]
                         print(f"  Using best feature count ({n_features}) for {model_name}")
                     else:
                         n_features = X_test.shape[1] if model_name != "Naive Bayes" or X_test_non_scaled is None else X_test_non_scaled.shape[1]
                     
-                    # 计算AIC值（使用测试集预测概率和特征数量）
+                   
                     aic_value = calculate_aic(y_test, y_pred_proba_test, n_features)
                     
                     model_performances[model_name] = {
@@ -861,7 +861,7 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                     print(f"  Error calculating metrics for {model_name}: {str(e)}")
                     continue
             
-            # 如果model_performances为空，则使用第一个可用的模型
+           
             if not model_performances:
                 print("Warning: No model performances calculated. Using first available model.")
                 if models:
@@ -871,7 +871,7 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                     print("Error: No models available to plot confusion matrix.")
                     return None
             else:
-                # 如果提供了基于交叉验证的最佳模型名称，我们仍然使用它，但增加过拟合检查
+               
                 if best_model_name_by_cv and best_model_name_by_cv in model_performances:
                     best_model_name = best_model_name_by_cv
                     perf = model_performances[best_model_name]
@@ -880,20 +880,20 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                     if perf['AUC_Gap'] is not None:
                         print(f"  AUC Gap = {perf['AUC_Gap']:.4f}")
                         
-                        # 检查是否存在过拟合风险
-                        if perf['AUC_Gap'] > 0.15:  # 如果训练集和测试集的AUC差距超过0.15，认为有过拟合风险
+                       
+                        if perf['AUC_Gap'] > 0.15:  
                             print(f"  WARNING: {best_model_name} has overfitting risk (AUC Gap > 0.15).")
-                            # 寻找AIC值最小的模型作为替代选项
+                            
                             alternative_model_name = min(model_performances, key=lambda x: model_performances[x]['AIC'])
                             alt_perf = model_performances[alternative_model_name]
                             
-                            # 如果替代模型的AIC值更小，且测试集AUC不低于最佳模型的95%，则使用替代模型
+                            
                             if alt_perf['AIC'] < perf['AIC'] and alt_perf['AUC_Test'] >= perf['AUC_Test'] * 0.95:
                                 print(f"  Alternative model {alternative_model_name} selected due to lower AIC and controlled overfitting.")
                                 print(f"  Alternative model Test AUC = {alt_perf['AUC_Test']:.4f}, AIC = {alt_perf['AIC']:.2f}")
                                 best_model_name = alternative_model_name
                 else:
-                    # 不使用交叉验证结果时，直接选择AIC值最小的模型
+                    
                     best_model_name = min(model_performances, key=lambda x: model_performances[x]['AIC'])
                     perf = model_performances[best_model_name]
                     print(f"\nBest Performing Model with AIC-based Selection: {best_model_name}")
@@ -901,7 +901,7 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                     if perf['AUC_Gap'] is not None:
                         print(f"  AUC Gap = {perf['AUC_Gap']:.4f}")
                 
-                # 确保best_model_name在models中
+               
                 if best_model_name in models:
                     best_model = models[best_model_name]
                     best_auc = model_performances[best_model_name]['AUC_Test']
@@ -911,11 +911,11 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                     if models:
                         best_model_name = next(iter(models.keys()))
                         best_model = models[best_model_name]
-                        # 尽量计算该模型的AUC
+                       
                         if best_model_name in model_performances:
                             best_auc = model_performances[best_model_name]['AUC_Test']
         
-        # 确保best_model已定义
+       
         if best_model is None:
             print("Error: No valid best model found. Using first available model.")
             if models:
@@ -926,16 +926,16 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                 return None
         
         # Generate confusion matrix for the best model
-        # 使用内部循环最佳特征数量进行特征选择
+        
         if best_model_name in inner_loop_best_feature_counts and inner_loop_best_feature_counts[best_model_name] > 0:
             n_features_to_use = inner_loop_best_feature_counts[best_model_name]
             print(f"Using {n_features_to_use} best features for confusion matrix prediction with {best_model_name}")
             
-            # 根据模型类型选择适当的数据并应用特征选择
+           
             if best_model_name == "Naive Bayes" and X_test_non_scaled is not None:
-                # 对非标准化测试数据应用特征选择
+                
                 if n_features_to_use < X_test_non_scaled.shape[1]:
-                    # 这里假设特征是按重要性排序的，取前n_features_to_use个特征
+                   
                     X_test_selected = X_test_non_scaled.iloc[:, :n_features_to_use]
                 else:
                     X_test_selected = X_test_non_scaled
@@ -943,34 +943,34 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                     y_pred = best_model.predict(X_test_selected)
                 except Exception as e:
                     print(f"Error predicting with {best_model_name}: {str(e)}")
-                    # 使用所有特征作为后备
+                    
                     y_pred = best_model.predict(X_test_non_scaled)
             else:
-                # 对标准化测试数据应用特征选择
+               
                 if n_features_to_use < X_test.shape[1]:
-                    # 这里假设特征是按重要性排序的，取前n_features_to_use个特征
+                   
                     X_test_selected = X_test.iloc[:, :n_features_to_use]
                 else:
                     X_test_selected = X_test
                 try:
-                    # 确保best_model不为None
+                    
                     if best_model is not None:
                         y_pred = best_model.predict(X_test_selected)
                     else:
                         print("Error: best_model is None, cannot make predictions.")
-                        # 使用默认模型
+                        
                         y_pred = default_model.predict(X_test_selected)
                         fallback_model_used = True
                 except Exception as e:
                     print(f"Error predicting with {best_model_name}: {str(e)}")
-                    # 使用所有特征作为后备
+                   
                     if best_model is not None:
                         y_pred = best_model.predict(X_test)
                     else:
                         y_pred = default_model.predict(X_test)
                         fallback_model_used = True
         else:
-            # 如果没有提供内部循环最佳特征数量，使用所有特征
+            
             if best_model_name == "Naive Bayes" and X_test_non_scaled is not None:
                 try:
                     if best_model is not None:
@@ -980,7 +980,7 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                         fallback_model_used = True
                 except Exception as e:
                     print(f"Error predicting with {best_model_name}: {str(e)}")
-                    # 使用标准化数据作为后备
+                   
                     try:
                         if best_model is not None:
                             y_pred = best_model.predict(X_test)
@@ -989,7 +989,7 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                             fallback_model_used = True
                     except Exception as e2:
                         print(f"Error predicting with standardized data: {str(e2)}")
-                        # 无法预测，返回None
+                        
                         return None
             else:
                 try:
@@ -1000,13 +1000,13 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
                         fallback_model_used = True
                 except Exception as e:
                     print(f"Error predicting with {best_model_name}: {str(e)}")
-                    # 无法预测，返回None
+                   
                     return None
         
-        # 确保y_pred已定义
+       
         if y_pred is None:
             print("Error: Failed to generate predictions.")
-            # 尝试使用默认模型作为最后的后备
+           
             try:
                 y_pred = default_model.predict(X_test)
                 fallback_model_used = True
@@ -1021,7 +1021,7 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Cured', 'Infected'])
         disp.plot(cmap=plt.cm.Blues, values_format='d')
         
-        # 根据是否使用了后备模型来设置标题
+       
         if fallback_model_used:
             plt.title(f'{best_model_name} Confusion Matrix (Fallback Model)\nTest Set AUC: {best_auc:.4f}', fontsize=14)
         else:
@@ -1037,13 +1037,13 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
         
     except Exception as e:
         print(f"Error in plot_confusion_matrix: {str(e)}")
-        # 作为最后的后备，尝试使用第一个可用模型
+       
         if models:
             best_model_name = next(iter(models.keys()))
             print(f"Attempting to use {best_model_name} as fallback.")
             try:
                 best_model = models[best_model_name]
-                # 简单预测
+               
                 if best_model_name == "Naive Bayes" and X_test_non_scaled is not None:
                     y_pred = best_model.predict(X_test_non_scaled)
                 else:
@@ -1064,11 +1064,11 @@ def plot_confusion_matrix(models, X_test, y_test, export_dir, X_test_non_scaled=
             except Exception as fallback_e:
                 print(f"Fallback failed: {str(fallback_e)}")
         
-        # 如果所有尝试都失败，返回None
+       
         print("Failed to plot confusion matrix.")
         return None
 
-# -------------------------- 8. ROC曲线计算 --------------------------
+# -------------------------- 8. ROC curve --------------------------
 def calculate_roc_curve(models, X_test, y_test, X_test_non_scaled=None):
     """Calculate ROC curve data for all models"""
     roc_results = {}
@@ -1093,7 +1093,7 @@ def calculate_roc_curve(models, X_test, y_test, X_test_non_scaled=None):
                 # Normalize to [0, 1] range
                 y_pred_proba = (decision_scores - decision_scores.min()) / (decision_scores.max() - decision_scores.min() + 1e-10)
         
-        # 计算ROC曲线和AUC
+       
         fpr, tpr, _ = roc_curve(y_test, y_pred_proba)
         auc_score = roc_auc_score(y_test, y_pred_proba)
         roc_results[model_name] = {'fpr': fpr, 'tpr': tpr, 'auc': auc_score}
@@ -1124,7 +1124,7 @@ def calculate_pr_curve(models, X_test, y_test, X_test_non_scaled=None):
                 # Normalize to [0, 1] range
                 y_pred_proba = (decision_scores - decision_scores.min()) / (decision_scores.max() - decision_scores.min() + 1e-10)
         
-        # 计算PR曲线
+       
         precision, recall, _ = precision_recall_curve(y_test, y_pred_proba)
         pr_auc = auc(recall, precision)
         pr_results[model_name] = {'precision': precision, 'recall': recall, 'pr_auc': pr_auc}
@@ -1135,7 +1135,7 @@ def calculate_calibration_curve(models, X_test, y_test, X_test_non_scaled=None):
     """Calculate calibration curve data for all models"""
     calib_results = {}
     for model_name, model in models.items():
-        # 使用适当的数据进行预测
+       
         if model_name == "Naive Bayes" and X_test_non_scaled is not None:
             try:
                 y_pred_proba = model.predict_proba(X_test_non_scaled)[:, 1]
@@ -1155,12 +1155,12 @@ def calculate_calibration_curve(models, X_test, y_test, X_test_non_scaled=None):
                 # Normalize to [0, 1] range
                 y_pred_proba = (decision_scores - decision_scores.min()) / (decision_scores.max() - decision_scores.min() + 1e-10)
         
-        # 计算校准曲线
+       
         prob_true, prob_pred = calibration_curve(y_test, y_pred_proba, n_bins=10)
         calib_results[model_name] = {'prob_true': prob_true, 'prob_pred': prob_pred}
     return calib_results
 
-# -------------------------- 11. DCA计算 --------------------------
+# -------------------------- 11. DCA --------------------------
 def calculate_dca(y_true, y_pred_proba, thresholds):
     """Calculate decision curve analysis metrics"""
     n = len(y_true)
@@ -1184,7 +1184,7 @@ def plot_roc_curve(roc_results, save_path, best_model_name=None):
     """Plot ROC curves for all models with best model highlighted"""
     plt.figure(figsize=(10, 8))
     plt.plot([0, 1], [0, 1], 'k--', label='Random Guess')
-    # 使用深色颜色映射并调整范围，使颜色更深
+    
     colors = plt.cm.Set1(np.linspace(0, 1, len(roc_results)))
     model_names = list(roc_results.keys())
     
@@ -1193,7 +1193,7 @@ def plot_roc_curve(roc_results, save_path, best_model_name=None):
         tpr = roc_results[model_name]['tpr']
         auc_score = roc_results[model_name]['auc']
         
-        # 突出显示最佳模型
+        
         if best_model_name and model_name == best_model_name:
             plt.plot(fpr, tpr, color='red', linewidth=2, 
                      label=f'{model_name} (AUC={auc_score:.4f})')
@@ -1217,7 +1217,7 @@ def plot_pr_curve(pr_results, y_test, save_path, best_model_name=None):
     prevalence = np.mean(y_test)
     plt.axhline(y=prevalence, color='k', linestyle='--', 
                 label=f'Random Guess (Prevalence={prevalence:.3f})')
-    # 使用深色颜色映射并调整范围，使颜色更深
+    
     colors = plt.cm.Set1(np.linspace(0, 1, len(pr_results)))
     model_names = list(pr_results.keys())
     
@@ -1226,7 +1226,7 @@ def plot_pr_curve(pr_results, y_test, save_path, best_model_name=None):
         recall = pr_results[model_name]['recall']
         pr_auc = pr_results[model_name]['pr_auc']
         
-        # 突出显示最佳模型
+       
         if best_model_name and model_name == best_model_name:
             plt.plot(recall, precision, color='red', linewidth=2, alpha=1.0,
                      label=f'{model_name} (PR-AUC={pr_auc:.4f})')
@@ -1248,7 +1248,7 @@ def plot_calibration_curve(calib_results, save_path):
     """Plot calibration curves for all models"""
     plt.figure(figsize=(10, 8))
     plt.plot([0, 1], [0, 1], 'k--', label='Perfect Calibration')
-    # 使用深色颜色映射并调整范围，使颜色更深
+    
     colors = plt.cm.Set1(np.linspace(0, 1, len(calib_results)))
     model_names = list(calib_results.keys())
     
@@ -1282,7 +1282,7 @@ def plot_dca_curve(models, X_test, y_test, save_path, X_test_non_scaled=None):
     all_treat_nb = [prevalence - (1-prevalence)*(pt/(1-pt)) for pt in thresholds]
     plt.plot(thresholds, all_treat_nb, color='gray', linestyle='--', label='Treat All')
     
-    # 使用深色颜色映射并调整范围，使颜色更深
+   
     colors = plt.cm.Set1(np.linspace(0, 1, len(models)))
     model_names = list(models.keys())
     
@@ -1329,19 +1329,19 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
     print("\n=== Evaluating Models on Test Set with AIC-based Selection ===")
     model_performances = {}
     
-    # 定义包含最佳特征子集和模型的字典
+   
     models_with_optimal_features = {}
     
     for model_name, model in retrained_models.items():
-        # 获取内部循环最佳特征数量，如果未提供则使用所有特征
+       
         if inner_loop_best_feature_counts and model_name in inner_loop_best_feature_counts:
             best_feature_count = inner_loop_best_feature_counts[model_name]
             print(f"  Using {best_feature_count} features for {model_name} from inner loop selection")
         else:
-            best_feature_count = X_train.shape[1]  # 默认使用所有特征
+            best_feature_count = X_train.shape[1]  
             print(f"  Using all {best_feature_count} features for {model_name} (no inner loop data available)")
         
-        # 尝试获取模型的特征重要性
+       
         try:
             if hasattr(model, 'feature_importances_'):
                 feature_importances = model.feature_importances_
@@ -1350,13 +1350,13 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
             elif hasattr(model, 'dual_coef_'):
                 feature_importances = np.abs(model.dual_coef_[0])
             else:
-                # 如果无法获取特征重要性，则使用所有特征
+               
                 print(f"  Warning: Cannot get feature importances for {model_name}, using all features")
                 feature_indices = np.arange(X_train.shape[1])
                 X_train_optimal = X_train
                 X_test_optimal = X_test
                 
-                # 重新训练模型
+              
                 new_model = copy.deepcopy(model)
                 new_model.fit(X_train_optimal, y_train)
                 models_with_optimal_features[model_name] = {
@@ -1366,18 +1366,18 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
                 }
                 continue
             
-            # 选择最重要的特征
+            
             if best_feature_count > len(feature_importances):
                 best_feature_count = len(feature_importances)
                 print(f"  Adjusted best feature count for {model_name} to {best_feature_count}")
             
             top_feature_indices = np.argsort(feature_importances)[::-1][:best_feature_count]
             
-            # 提取最佳特征子集
+           
             X_train_optimal = X_train[:, top_feature_indices]
             X_test_optimal = X_test[:, top_feature_indices]
             
-            # 重新训练模型
+           
             new_model = copy.deepcopy(model)
             new_model.fit(X_train_optimal, y_train)
             
@@ -1389,7 +1389,7 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
             
         except Exception as e:
             print(f"  Error during feature selection for {model_name}: {str(e)}")
-            # 如果特征选择失败，使用原始模型和所有特征
+            
             models_with_optimal_features[model_name] = {
                 'model': model,
                 'best_feature_count': X_train.shape[1],
@@ -1397,14 +1397,14 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
             }
             continue
         
-        # 根据模型类型使用适当的数据进行预测
+        
         current_model = models_with_optimal_features[model_name]['model']
         best_feature_count = models_with_optimal_features[model_name]['best_feature_count']
         
         if model_name == "Naive Bayes" and X_test_non_scaled is not None:
-            # 注意：Naive Bayes需要非标准化数据，这里可能需要特殊处理特征选择
+            
             try:
-                # 使用原始模型的预测（因为Naive Bayes的特征选择比较特殊）
+               
                 y_pred_proba_test = model.predict_proba(X_test_non_scaled)[:, 1]
                 y_pred_proba_train = model.predict_proba(X_train)[:, 1]
             except AttributeError:
@@ -1445,7 +1445,7 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
         try:
             auc_test = roc_auc_score(y_test, y_pred_proba_test)
             auc_train = roc_auc_score(y_train, y_pred_proba_train)
-            # 计算训练集和测试集的AUC差距，用于评估过拟合
+           
             auc_gap = auc_train - auc_test
         except Exception as e:
             print(f"  Error calculating AUC for {model_name}: {str(e)}")
@@ -1464,10 +1464,10 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
             acc_train = accuracy_score(y_train, y_pred_train)
             acc_gap = acc_train - acc_test
             
-            # 计算AIC值（使用测试集预测概率和特征数量）
+           
             aic_value = calculate_aic(y_test, y_pred_proba_test, best_feature_count)
             
-            # AIC值越小表示模型越好，这里我们转换为得分（-AIC）以便与原有逻辑兼容
+           
             aic_based_score = -aic_value
             
             model_performances[model_name] = {
@@ -1489,16 +1489,16 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
             print(f"  Error calculating metrics for {model_name}: {str(e)}")
             continue
     
-    # 更新retrained_models为使用最佳特征子集的模型
+   
     updated_retrained_models = {}
     for model_name, model_data in models_with_optimal_features.items():
         updated_retrained_models[model_name] = model_data['model']
     
-    # 如果提供了基于交叉验证的最佳模型名称，我们仍然使用它，但增加过拟合检查
+   
     try:
         if best_model_name_by_cv and best_model_name_by_cv in updated_retrained_models:
             best_model_name = best_model_name_by_cv
-            # 安全检查：确保模型名称在model_performances字典中
+            
             if best_model_name not in model_performances:
                 print(f"Warning: {best_model_name} not found in model_performances, selecting based on AIC")
                 if model_performances:
@@ -1508,7 +1508,7 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
                 else:
                     best_model_name = None
             
-            # 再次检查best_model_name是否有效
+           
             if best_model_name and best_model_name in model_performances:
                 perf = model_performances[best_model_name]
                 best_feature_count = models_with_optimal_features[best_model_name]['best_feature_count']
@@ -1516,16 +1516,16 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
                 print(f"  Using {best_feature_count} features from inner loop selection")
                 print(f"  Test AUC = {perf['AUC_Test']:.4f}, Train AUC = {perf['AUC_Train']:.4f}, AUC Gap = {perf['AUC_Gap']:.4f}")
                 
-                # 检查是否存在过拟合风险
-                if perf['AUC_Gap'] > 0.15:  # 如果训练集和测试集的AUC差距超过0.15，认为有过拟合风险
+              
+                if perf['AUC_Gap'] > 0.15:  
                     print(f"  WARNING: {best_model_name} has overfitting risk (AUC Gap > 0.15).")
-                    # 寻找AIC值最小的模型作为替代选项
+                   
                     try:
                         alternative_model_name = min(model_performances, key=lambda x: model_performances[x]['AIC'])
                         if alternative_model_name in model_performances:
                             alt_perf = model_performances[alternative_model_name]
                             
-                            # 如果替代模型的AIC值更小，且测试集AUC不低于最佳模型的95%，则使用替代模型
+                           
                             if alt_perf['AIC'] < perf['AIC'] and alt_perf['AUC_Test'] >= perf['AUC_Test'] * 0.95:
                                 print(f"  Alternative model {alternative_model_name} selected due to lower AIC and controlled overfitting.")
                                 print(f"  Alternative model Test AUC = {alt_perf['AUC_Test']:.4f}, AIC = {alt_perf['AIC']:.2f}")
@@ -1538,7 +1538,7 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
                 print(f"Warning: Cannot access performance data for model {best_model_name}")
     except Exception as e:
         print(f"Error in best model selection process: {str(e)}")
-        # 回退到选择第一个可用模型
+        
         if updated_retrained_models:
             best_model_name = list(updated_retrained_models.keys())[0]
             print(f"  Falling back to first available model: {best_model_name}")
@@ -1546,7 +1546,7 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
             best_model_name = None
             print("  No models available for selection")
     else:
-        # 不使用交叉验证结果时，直接选择AIC值最小的模型
+        
         try:
             best_model_name = min(model_performances, key=lambda x: model_performances[x]['AIC'])
             perf = model_performances[best_model_name]
@@ -1557,7 +1557,7 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
             print(f"  AIC: {perf['AIC']:.2f}, AIC-Based Score: {perf['AIC_Based_Score']:.2f}")
         except Exception as e:
             print(f"Error selecting best model: {str(e)}")
-            # 回退到选择第一个可用模型
+           
             if updated_retrained_models:
                 best_model_name = list(updated_retrained_models.keys())[0]
                 perf = {'AUC_Test': 0, 'AUC_Train': 0, 'AUC_Gap': 0, 'AIC': float('inf'), 'AIC_Based_Score': 0}
@@ -1569,11 +1569,11 @@ def identify_best_model(retrained_models, X_test, y_test, X_train, y_train, X_te
                 perf = None
                 best_feature_count = 'all'
     
-    # 确保返回安全，即使best_model_name为None
+    
     if best_model_name and best_model_name in updated_retrained_models:
         best_model = updated_retrained_models[best_model_name]
     elif updated_retrained_models:
-        # 回退到第一个可用模型
+       
         best_model_name = list(updated_retrained_models.keys())[0]
         best_model = updated_retrained_models[best_model_name]
         print(f"  Final fallback to first available model: {best_model_name}")
@@ -1588,7 +1588,7 @@ def perform_shap_analysis(best_model_name, best_model, X_train, X_test, y_test, 
     """Perform enhanced SHAP analysis on the best model"""
     print(f"\n=== Performing Enhanced SHAP Analysis on {best_model_name} ===")
     
-    # 确定用于SHAP分析的数据
+   
     if best_model_name == "Naive Bayes" and X_test_non_scaled is not None:
         X_shap_test = X_test_non_scaled
         X_shap_train = X_train  # For LinearExplainer, use scaled data
@@ -1599,13 +1599,13 @@ def perform_shap_analysis(best_model_name, best_model, X_train, X_test, y_test, 
         X_shap_test_display = X_test
     
     try:
-        # 根据模型类型创建适当的SHAP解释器
+        
         if best_model_name in ['Random Forest', 'XGBoost']:
             explainer = shap.TreeExplainer(best_model)
         elif best_model_name == 'Logistic Regression':
             explainer = shap.LinearExplainer(best_model, X_shap_train)
         elif best_model_name in ['SVM', 'Naive Bayes', 'Decision Tree', 'Neural Network']:
-            # 使用样本提高速度
+           
             sample_size = min(100, len(X_shap_train))
             explainer = shap.KernelExplainer(
                 best_model.predict_proba, 
@@ -1616,16 +1616,16 @@ def perform_shap_analysis(best_model_name, best_model, X_train, X_test, y_test, 
             return None
         
         if explainer is not None:
-            # 计算SHAP值
+            
             shap_values = explainer.shap_values(X_shap_test)
             
-            # 处理不同的SHAP值格式
+           
             if isinstance(shap_values, list):
                 shap_values = shap_values[1]  # For binary classification
             elif shap_values.ndim == 3:
                 shap_values = shap_values[:, :, 1]  # For certain models
             
-            # SHAP摘要图（蜂群图）
+           
             plt.figure(figsize=(10, 8))
             shap.summary_plot(shap_values, X_shap_test_display, feature_names=X_shap_test_display.columns, show=False)
             plt.title(f'{best_model_name} SHAP Summary Plot')
@@ -1634,7 +1634,7 @@ def perform_shap_analysis(best_model_name, best_model, X_train, X_test, y_test, 
             plt.close()
             print(f"SHAP summary plot saved: {plot_path}")
             
-            # 计算预测以选择代表性样本
+           
             if best_model_name == "Naive Bayes" and X_test_non_scaled is not None:
                 y_pred_proba = best_model.predict_proba(X_test_non_scaled)[:, 1]
             else:
@@ -1642,30 +1642,30 @@ def perform_shap_analysis(best_model_name, best_model, X_train, X_test, y_test, 
             
             # Generate SHAP waterfall plots for multiple representative samples
             if len(X_shap_test) > 0:
-                # 获取基值
+                
                 if np.isscalar(explainer.expected_value):
                     base_value = explainer.expected_value
                 else:
                     base_value = explainer.expected_value[1] if len(explainer.expected_value) > 1 else explainer.expected_value[0]
                 
-                # 选择3个代表性样本：最高概率、最低概率和中等概率
+               
                 sample_indices = []
                 sample_types = []
                 
-                # 最高概率样本
+              
                 if len(y_pred_proba) > 0:
                     highest_prob_idx = y_pred_proba.argsort()[-1]
                     sample_indices.append(highest_prob_idx)
                     sample_types.append('highest_prob')
                 
-                # 最低概率样本
+               
                 if len(y_pred_proba) > 1:
                     lowest_prob_idx = y_pred_proba.argsort()[0]
                     if lowest_prob_idx != highest_prob_idx:
                         sample_indices.append(lowest_prob_idx)
                         sample_types.append('lowest_prob')
                 
-                # 中等概率样本
+              
                 if len(y_pred_proba) > 2:
                     middle_idx = len(y_pred_proba) // 2
                     if middle_idx not in sample_indices:
@@ -1677,12 +1677,12 @@ def perform_shap_analysis(best_model_name, best_model, X_train, X_test, y_test, 
                     sample_indices = [0]
                     sample_types = ['first']
                 
-                # 为选定的样本生成瀑布图
+               
                 for i, (sample_index, sample_type) in enumerate(zip(sample_indices, sample_types)):
                     try:
                         shap_single_sample = shap_values[sample_index]
                         
-                        # 创建SHAP解释对象
+                        
                         shap_exp = shap.Explanation(
                             values=shap_single_sample,
                             base_values=base_value,
@@ -1692,7 +1692,7 @@ def perform_shap_analysis(best_model_name, best_model, X_train, X_test, y_test, 
                         
                         # Plot waterfall plot with improved settings
                         plt.figure(figsize=(14, 10))
-                        # 在瀑布图中显示更多特征
+                       
                         shap.plots.waterfall(shap_exp, max_display=15, show=False)
                         
                         # Add detailed title with sample information
@@ -1705,14 +1705,14 @@ def perform_shap_analysis(best_model_name, best_model, X_train, X_test, y_test, 
                         else:
                             title = f'{best_model_name} SHAP Waterfall Plot (Sample {sample_index})'
                         
-                        # 在标题中添加预测概率
+                        
                         pred_prob = y_pred_proba[sample_index]
                         true_label = y_test.iloc[sample_index]
-                        # 将数值标签映射到其实际含义
+                        
                         label_meaning = 'Serologically Cured' if true_label == 0 else 'Currently Infected'  # 0=Cured, 1=Infected
                         plt.title(f"{title}\nSample Index: {sample_index}, Prediction Probability: {pred_prob:.4f}, True Label: {true_label} ({label_meaning})", fontsize=14)
                         
-                        # 保存图像
+                        
                         plot_path = os.path.join(export_dir, f'{best_model_name}_SHAP_Waterfall_Plot_{sample_type}.png')
                         plt.savefig(plot_path, dpi=300, bbox_inches='tight')
                         plt.close()
@@ -1720,7 +1720,7 @@ def perform_shap_analysis(best_model_name, best_model, X_train, X_test, y_test, 
                     except Exception as e:
                         print(f"Error generating waterfall plot for sample {sample_index}: {str(e)}")
             
-            # 带有蜂群图和条形图的组合SHAP图
+            
             plt.figure(figsize=(10, 8))
             shap.summary_plot(shap_values, X_shap_test_display, feature_names=X_shap_test_display.columns, plot_type="dot", show=False, color_bar=True)
             plt.gca().set_position([0.5, 0.5, 0.65, 0.65])
@@ -1729,15 +1729,15 @@ def perform_shap_analysis(best_model_name, best_model, X_train, X_test, y_test, 
             shap.summary_plot(shap_values, X_shap_test_display, plot_type="bar", show=False)
             plt.gca().set_position([0.5, 0.5, 0.65, 0.65])
             
-            # 自定义样式
+           
             ax2.axhline(y=13, color='gray', linestyle='-', linewidth=1)
-            bars = ax2.patches  # 获取所有条形对象
+            bars = ax2.patches  
             for bar in bars:
                 bar.set_alpha(0.2)
             
             ax1.set_xlabel('Shapley Value Contribution (Beeswarm Plot)', fontsize=10)
             ax2.set_xlabel('Mean Shapley Value (Feature Importance)', fontsize=10)
-            ax2.xaxis.set_label_position('top')  # 将标签移到顶部
+            ax2.xaxis.set_label_position('top')  
             ax2.xaxis.tick_top()  # Move ticks to the top
             ax1.set_ylabel('Features', fontsize=10)
             plt.tight_layout()
@@ -1753,10 +1753,10 @@ def perform_shap_analysis(best_model_name, best_model, X_train, X_test, y_test, 
             feature_importance_df = pd.DataFrame({
                 'Feature': X_shap_test.columns,
                 'SHAP_Importance': feature_importance,
-                'Rank': range(1, len(feature_importance) + 1)  # 添加排名列
+                'Rank': range(1, len(feature_importance) + 1) 
             }).sort_values('SHAP_Importance', ascending=False)
             
-            # 将特征重要性保存到Excel
+            
             excel_path = os.path.join(export_dir, f'{best_model_name}_feature_importance.xlsx')
             feature_importance_df.to_excel(excel_path, index=False)
             print(f"Enhanced feature importance saved to: {excel_path}")
@@ -1765,9 +1765,9 @@ def perform_shap_analysis(best_model_name, best_model, X_train, X_test, y_test, 
         
     except Exception as e:
         print(f"Error in SHAP analysis for {best_model_name}: {str(e)}")
-        # 对于SHAP不能很好工作的模型（如Naive Bayes），使用替代重要性度量
+       
         if best_model_name == "Naive Bayes":
-            # 使用变异系数作为替代重要性度量
+           
             if hasattr(best_model, 'theta_'):
                 # 对于GaussianNB
                 mean_vals = best_model.theta_[1]  # Mean for positive class
@@ -1781,7 +1781,7 @@ def perform_shap_analysis(best_model_name, best_model, X_train, X_test, y_test, 
                     'Rank': range(1, len(cv_vals) + 1)  # 添加排名列
                 }).sort_values('SHAP_Importance', ascending=False)
                 
-                # 将特征重要性保存到Excel
+               
                 excel_path = os.path.join(export_dir, f'{best_model_name}_feature_importance.xlsx')
                 feature_importance_df.to_excel(excel_path, index=False)
                 print(f"Naive Bayes feature importance (based on coefficient of variation) saved: {excel_path}")
@@ -1802,32 +1802,32 @@ def feature_selection_by_shap(best_model_name, best_model, X_train, X_test, y_tr
     print(f"\n=== Performing Enhanced Feature Selection for {best_model_name} Based on SHAP Importance ===")
     print("This process shows how model performance changes as we add features based on SHAP values from most to least important.")
     
-    # 获取按重要性排序的特征名称
+   
     sorted_features = feature_importance_df['Feature'].tolist()
     total_features = len(sorted_features)
     
-    # 存储结果
+   
     selection_results = []
     best_auc = 0
     best_feature_count = 0
     best_features = []
     
-    # 为了与测试集评估保持一致性，对全特征集使用完全相同的模型实例
+   
     if best_model_test_auc is not None:
         print(f"\nUsing original test set evaluation for consistency. Test set AUC: {best_model_test_auc:.4f}")
         
-    # 创建一个具有最佳参数的新模型实例
+  
     if best_model_name == "XGBoost":
-        # 创建参数字典，避免random_state重复传递
+        
         model_params = best_model.get_params()
-        model_params['random_state'] = RANDOM_SEED  # 确保使用指定的随机种子
+        model_params['random_state'] = RANDOM_SEED  
         base_model = xgb.XGBClassifier(**model_params)
     elif best_model_name == "Naive Bayes":
-        # Naive Bayes不接受random_state参数
+       
         base_model = GaussianNB(**best_model.get_params())
     else:
         base_model_class = best_model.__class__
-        # 获取模型参数并更新random_state
+       
         model_params = best_model.get_params()
         model_params['random_state'] = RANDOM_SEED
         base_model = base_model_class(**model_params)
@@ -1841,7 +1841,7 @@ def feature_selection_by_shap(best_model_name, best_model, X_train, X_test, y_tr
         # Select top N features
         selected_features = sorted_features[:num_features]
         
-        # 准备具有选定特征的训练和测试数据
+       
         if best_model_name == "Naive Bayes" and X_train_non_scaled is not None:
             X_train_selected = X_train_non_scaled[selected_features]
             X_test_selected = X_test_non_scaled[selected_features]
@@ -1849,19 +1849,19 @@ def feature_selection_by_shap(best_model_name, best_model, X_train, X_test, y_tr
             X_train_selected = X_train[selected_features]
             X_test_selected = X_test[selected_features]
         
-        # 用选定的特征训练模型
+      
         try:
             if best_model_name == "Naive Bayes":
-                # Naive Bayes不接受random_state参数
+               
                 model = GaussianNB(**base_model.get_params())
             else:
-                # 获取模型参数并更新random_state
+               
                 model_params = base_model.get_params()
                 model_params['random_state'] = RANDOM_SEED
                 model = base_model.__class__(**model_params)
             model.fit(X_train_selected, y_train)
         
-            # 在测试集上评估
+           
             y_pred_proba = model.predict_proba(X_test_selected)[:, 1]
             auc_score = roc_auc_score(y_test, y_pred_proba)
             accuracy = accuracy_score(y_test, model.predict(X_test_selected))
@@ -1881,27 +1881,27 @@ def feature_selection_by_shap(best_model_name, best_model, X_train, X_test, y_tr
                 'Marginal_Feature': selected_features[-1]  # Feature added in this step
             })
         
-            # 更新最佳模型
+           
             if auc_score > best_auc or (auc_score == best_auc and num_features < best_feature_count):
                 best_auc = auc_score
                 best_feature_count = num_features
                 best_features = selected_features
         
-            # 打印进度，带有变化指示符
+         
             change_indicator = "+" if auc_change > 0 else "" if auc_change == 0 else "-"
             print(f"{num_features:12d} | {auc_score:.4f} | {accuracy:.4f} | {change_indicator}{auc_change:.4f}")
             
-            # 存储全特征集AUC用于比较
+        
             if num_features == total_features:
                 full_feature_auc = auc_score
         except Exception as e:
             print(f"Error during feature selection with {num_features} features: {str(e)}")
             
-    # 确保full_feature_auc有值，即使全特征集评估失败
+   
     if 'full_feature_auc' not in locals():
         full_feature_auc = best_model_test_auc if best_model_test_auc is not None else 0
     
-    # 将结果转换为DataFrame
+    
     df_selection_results = pd.DataFrame(selection_results)
     
     # Save detailed feature selection results
@@ -1912,13 +1912,13 @@ def feature_selection_by_shap(best_model_name, best_model, X_train, X_test, y_tr
     
     # Generate feature selection performance curve
     if export_dir and not df_selection_results.empty:
-        # 为图表创建特征名称标签
+       
         feature_labels = [f'{i}. {sorted_features[i-1]}' for i in range(1, total_features + 1)]
         
-        plt.figure(figsize=(14, 7))  # 增加宽度以适应特征名称
+        plt.figure(figsize=(14, 7)) 
         plt.plot(feature_labels, df_selection_results['AUC'], 'o-', linewidth=2, color='blue')
         plt.axhline(y=full_feature_auc, color='red', linestyle='--', alpha=0.5, label=f'Full Features AUC ({full_feature_auc:.4f})')
-        # 找到最佳特征对应的索引位置
+       
         best_feature_idx = best_feature_count - 1
         plt.axvline(x=best_feature_idx, color='green', linestyle='--', alpha=0.5, label=f'Best Feature Set ({best_feature_count} features)')
         plt.title(f'{best_model_name} Feature Selection Performance Curve\nBest AUC: {best_auc:.4f} (using {best_feature_count} features)', fontsize=14)
@@ -1926,10 +1926,10 @@ def feature_selection_by_shap(best_model_name, best_model, X_train, X_test, y_tr
         plt.ylabel('AUC Score', fontsize=12)
         plt.grid(alpha=0.3)
         plt.legend(fontsize=10)
-        plt.xticks(rotation=45, ha='right')  # 旋转标签以提高可读性
+        plt.xticks(rotation=45, ha='right')  
         plt.tight_layout()
         
-        # 解释AUC值差异的原因
+       
         print("\nNote: The AUC values in this feature selection curve may differ from the AUC values in the main evaluation plot.")
         print("Reason: This curve shows performance of models retrained with feature subsets, while the main plot shows performance of the original full model.")
         print("Even with the same features, model retraining can lead to slight variations in performance metrics.")
@@ -1939,7 +1939,7 @@ def feature_selection_by_shap(best_model_name, best_model, X_train, X_test, y_tr
         plt.close()
         print(f"Feature selection performance curve saved: {performance_curve_path}")
     
-    # 保存最佳特征集
+    
     if export_dir and best_features:
         best_feature_set = pd.DataFrame({'Feature': best_features, 'Rank': range(1, len(best_features) + 1)})
         best_feature_set_path = os.path.join(export_dir, f'{best_model_name}_best_feature_set.xlsx')
@@ -2038,7 +2038,7 @@ def create_timestamped_directory(base_name):
     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     export_dir = f"{base_name}_{timestamp}"
     
-    # 如果目录已存在，添加计数器后缀
+    
     counter = 1
     temp_dir = export_dir
     while os.path.exists(temp_dir):
@@ -2064,7 +2064,7 @@ def main():
     
     # ===================== Parameter Selection Section =====================
     print("\n\n===== Starting Parameter Selection Process ====")
-    # 1. 加载和预处理数据
+   
     processed_datasets = load_and_preprocess_data()
     
     # 2. Initialize Models and Parameter Grids
@@ -2079,7 +2079,7 @@ def main():
         X_train_scaled, y_train, models, param_grids, param_counts, X_train_non_scaled, main_export_dir
     )
     
-    # 4. 在完整训练集上重训练最佳模型
+   
     retrained_models = retrain_best_models(best_models, X_train_scaled, y_train, X_train_non_scaled)
 
     # ===================== Parameter Optimization and Model Evaluation Section =====================
@@ -2089,9 +2089,9 @@ def main():
     y_test = processed_datasets['y_test']
     X_test_non_scaled = processed_datasets['X_test_non_scaled']
 
-    # 从嵌套交叉验证结果中找到平均外部验证AUC最高的模型
+    
     print("\n=== Finding Best Model by Nested CV Average AUC ===")
-    # 按照Mean_Outer_AUC降序排序
+   
     sorted_cv_results = df_grid_summary.sort_values('Mean_Outer_AUC', ascending=False)
     best_model_name_by_cv = sorted_cv_results.iloc[0]['Model']
     best_mean_outer_auc = sorted_cv_results.iloc[0]['Mean_Outer_AUC']
@@ -2102,7 +2102,7 @@ def main():
 
     print(f"\nBest Model by Nested CV: {best_model_name_by_cv}, Mean Outer AUC = {best_mean_outer_auc:.4f}")
 
-    # 提取每个模型的内部循环最佳特征数量
+   
     inner_loop_best_feature_counts = {}
     for model_name in retrained_models.keys():
         if model_name in all_feature_selection_results and all_feature_selection_results[model_name]:
@@ -2117,22 +2117,18 @@ def main():
             inner_loop_best_feature_counts[model_name] = X_train_scaled.shape[1]  # 默认使用所有特征
             print(f"Model {model_name}: No inner loop feature selection results, using all features")
 
-    # 使用嵌套交叉验证结果选择最佳模型（基于内部循环最佳特征数量）
+   
     best_model_name, best_model, model_performances = identify_best_model(
         retrained_models, X_test_scaled, y_test, X_train_scaled, y_train, X_test_non_scaled, best_model_name_by_cv, inner_loop_best_feature_counts
     )
     
-    # 5. 在所有数据集上评估模型（使用经过特征选择的模型）
-    # 从identify_best_model函数中，我们可以通过model_performances获取每个模型的最佳特征数量
-    # 重新运行evaluate_models_on_all_datasets，确保Feature_Count列使用最佳特征数量
+  
     from collections import defaultdict
     
-    # 创建一个新的字典，包含使用最佳特征子集的模型
+   
     updated_retrained_models = {}
     for model_name, model in retrained_models.items():
-        # 这里我们需要重新创建使用最佳特征数量的模型
-        # 由于我们无法直接获取identify_best_model中创建的updated_retrained_models
-        # 我们重新执行特征选择过程
+       
         best_feature_count = inner_loop_best_feature_counts[model_name]
         
         try:
@@ -2143,20 +2139,20 @@ def main():
             elif hasattr(model, 'dual_coef_'):
                 feature_importances = np.abs(model.dual_coef_[0])
             else:
-                # 如果无法获取特征重要性，则使用所有特征
+               
                 updated_retrained_models[model_name] = model
                 continue
             
-            # 选择最重要的特征
+           
             if best_feature_count > len(feature_importances):
                 best_feature_count = len(feature_importances)
                 
             top_feature_indices = np.argsort(feature_importances)[::-1][:best_feature_count]
             
-            # 提取最佳特征子集
+          
             X_train_optimal = X_train_scaled[:, top_feature_indices]
             
-            # 重新训练模型
+          
             if model_name == "XGBoost":
                 new_model = xgb.XGBClassifier(**model.get_params())
             elif model_name == "Naive Bayes":
@@ -2168,22 +2164,22 @@ def main():
             new_model.fit(X_train_optimal, y_train)
             updated_retrained_models[model_name] = new_model
         except Exception:
-            # 如果特征选择失败，使用原始模型
+           
             updated_retrained_models[model_name] = model
     
-    # 在所有数据集上评估经过特征选择的模型
+   
     df_evaluation = evaluate_models_on_all_datasets(updated_retrained_models, processed_datasets, main_export_dir)
     
-    # 计算测试集上的曲线数据（使用经过特征选择的模型）
+    
     print("\n=== Calculating Curve Data on Test Set ===")
     roc_results = calculate_roc_curve(updated_retrained_models, X_test_scaled, y_test, X_test_non_scaled)
     pr_results = calculate_pr_curve(updated_retrained_models, X_test_scaled, y_test, X_test_non_scaled)
     calib_results = calculate_calibration_curve(updated_retrained_models, X_test_scaled, y_test, X_test_non_scaled)
     
-    # 6. Visualize inner loop feature selection results
+    
     print("\n\n===== Visualizing Inner Loop Feature Selection Results ====")
         
-    # 只对最终确定的最佳模型生成内部循环特征选择AUC曲线
+  
     if best_model_name in all_feature_selection_results:
         visualize_inner_loop_feature_selection(
             best_model_name, 
@@ -2211,14 +2207,14 @@ def main():
         X_test_non_scaled, 
         X_train=X_train_scaled, 
         y_train=y_train, 
-        best_model_name_by_cv=best_model_name,  # 使用通过嵌套交叉验证选择的最佳模型名称
-        inner_loop_best_feature_counts=inner_loop_best_feature_counts  # 添加内部循环最佳特征数量参数
+        best_model_name_by_cv=best_model_name,  
+        inner_loop_best_feature_counts=inner_loop_best_feature_counts  
     )
         
     # ===================== SHAP Analysis Section =====================
     print("\n\n===== Starting SHAP Analysis Process ====")
         
-    # 执行SHAP分析
+   
     feature_importance_df = perform_shap_analysis(
         best_model_name, best_model, X_train_scaled, X_test_scaled, y_test,
         X_test_non_scaled, main_export_dir
@@ -2226,11 +2222,11 @@ def main():
         
     # Perform feature selection based on SHAP importance
     if feature_importance_df is not None:
-        # 添加安全检查，确保best_model_name存在于model_performances字典中
+       
         if best_model_name and best_model_name in model_performances:
             best_test_auc = model_performances[best_model_name]['AUC_Test']
         else:
-            # 如果不存在，使用默认值0.5（AUC的随机性能）
+           
             best_test_auc = 0.5
             print(f"Warning: Cannot access performance data for model {best_model_name}, using default AUC value of 0.5")
         
